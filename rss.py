@@ -4,12 +4,14 @@ import urllib.request
 import datetime
 from pathlib import Path
 from urllib.request import urlopen, Request
+from urllib.error import HTTPError, URLError
+import socket
+import logging
 
 
 def seve_opml(nodes, output_path):
     generated_on = str(datetime.datetime.now())
 
-    # Configure one attribute with set()
     root = Element('opml')
     root.set('version', '1.0')
 
@@ -75,28 +77,42 @@ def read_opml(file_path):
         name = node.attrib.get('text')
         url = node.attrib.get('xmlUrl')
         if name and url:
+            rss_data = None
 
-            rss_request = Request(url=url, headers=headers)
-            rss_data = urlopen(rss_request).read()
+            try:
+                rss_request = Request(url=url, headers=headers)
+                rss_data = urlopen(rss_request).read()
 
+                if rss_data is not None and type(rss_data) == str() and len(rss_data) > 0:
+                    reddit_root = fromstring(rss_data)
+                    item = reddit_root.findall('channel/item')
 
-            reddit_root = fromstring(rss_data)
-            item = reddit_root.findall('channel/item')
+                    reddit_feed = []
+                    for entry in item:
+                        pubDate = entry.findtext('pubDate')
+                        reddit_feed.append([pubDate])
 
-            reddit_feed = []
-            for entry in item:
-                pubDate = entry.findtext('pubDate')
-                reddit_feed.append([pubDate])
+                    if len(reddit_feed) > 0 and len(reddit_feed[0]) > 0:
+                        first_date = reddit_feed[0][0]
 
-            if len(reddit_feed) > 0 and len(reddit_feed[0]) > 0:
-                first_date = reddit_feed[0][0]
-
-                if first_date.find("2018") >= 0 or first_date.find("2019") >= 0:
-                    continue
+                        if first_date.find("2018") >= 0 or first_date.find("2019") >= 0:
+                            continue
+                        else:
+                            nodes.remove(node)
+                    else:
+                        nodes.remove(node)
                 else:
                     nodes.remove(node)
-            else:
+
+            except HTTPError as error:
+                logging.error('Data of %s not retrieved because %s\nURL: %s', name, error, url)
                 nodes.remove(node)
+            except URLError as error:
+                nodes.remove(node)
+                if isinstance(error.reason, socket.timeout):
+                    logging.error('socket timed out - URL %s', url)
+                else:
+                    logging.error('some other error happened - URL %s', url)
 
     return nodes
 
