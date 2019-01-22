@@ -1,3 +1,5 @@
 venv
 *.pyc
 .cache
+feed.opml
+opuput.opml
