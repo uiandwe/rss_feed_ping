@@ -2,4 +2,4 @@ venv
 *.pyc
 .cache
 feed.opml
-opuput.opml
+output.opml

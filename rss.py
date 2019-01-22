@@ -121,8 +121,7 @@ def read_opml(file_path):
 
 def main():
     nodes = read_opml("./feed.opml")
-    if type(nodes) == list():
-        seve_opml(nodes, "output.opml")
+    seve_opml(nodes, "output.opml")
 
 
 if __name__ == "__main__":
