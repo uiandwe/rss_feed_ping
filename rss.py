@@ -1,15 +1,16 @@
-from xml.etree.ElementTree import parse, Element, SubElement, Comment, tostring, fromstring
+from xml.etree.ElementTree import parse, Element, SubElement, Comment, fromstring
 import xml.etree.ElementTree as ET
-import urllib.request
 import datetime
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 import socket
 import logging
+import http
 
 
 def seve_opml(nodes, output_path):
+    print("seve_opml")
     generated_on = str(datetime.datetime.now())
 
     root = Element('opml')
@@ -46,11 +47,11 @@ def seve_opml(nodes, output_path):
 
     et = ET.ElementTree()
     et._setroot(root)
+    print("write opml")
     et.write(output_path)
 
 
 def read_opml(file_path):
-
 
     my_file = Path(file_path)
     if my_file.is_file() is False:
@@ -77,7 +78,6 @@ def read_opml(file_path):
         name = node.attrib.get('text')
         url = node.attrib.get('xmlUrl')
         if name and url:
-            rss_data = None
 
             try:
                 rss_request = Request(url=url, headers=headers)
@@ -103,7 +103,9 @@ def read_opml(file_path):
                         nodes.remove(node)
                 else:
                     nodes.remove(node)
-
+            except http.client.IncompleteRead as e:
+                nodes.remove(node)
+                logging.error('http.client.IncompleteRead - URL %s', url)
             except HTTPError as error:
                 logging.error('Data of %s not retrieved because %s\nURL: %s', name, error, url)
                 nodes.remove(node)
